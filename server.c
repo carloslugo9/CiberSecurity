@@ -103,7 +103,7 @@ int main( int argc, char *argv[] )
     VerifAndDecryptMessage(TcpMessage, TcpMessageSize, payload, &payloadSize);
     dump_buf( "Payload:  ", payload, sizeof( payload ) );
 
-#if 1
+
      int sockfd, newsockfd, portno = 8081, clilen;
      char buffer[256];
      struct sockaddr_in serv_addr, cli_addr;
@@ -153,7 +153,6 @@ int main( int argc, char *argv[] )
      }
 
 
-#endif
 
 
     return( 0 );
