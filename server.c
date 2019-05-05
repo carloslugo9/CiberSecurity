@@ -44,7 +44,9 @@
 /********************* S T A T I C   P R O T O T Y P E S *********************/
 /*****************************************************************************/
 /*****************************************************************************/
-
+static int func( int a );
+static void sendData( int sockfd, int x );
+static int getData( int sockfd );
 
 
 /*****************************************************************************/
@@ -101,7 +103,7 @@ int main( int argc, char *argv[] )
     VerifAndDecryptMessage(TcpMessage, TcpMessageSize, payload, &payloadSize);
     dump_buf( "Payload:  ", payload, sizeof( payload ) );
 
-#if 0
+#if 1
      int sockfd, newsockfd, portno = 8081, clilen;
      char buffer[256];
      struct sockaddr_in serv_addr, cli_addr;
@@ -112,7 +114,6 @@ int main( int argc, char *argv[] )
     
      sockfd = socket(AF_INET, SOCK_STREAM, 0);
      if (sockfd < 0) 
-         //error( const_cast<char *>("ERROR opening socket") );
 	 printf("ERROR opening socket");
      bzero((char *) &serv_addr, sizeof(serv_addr));
 
@@ -121,7 +122,6 @@ int main( int argc, char *argv[] )
      serv_addr.sin_port = htons( portno );
      if (bind(sockfd, (struct sockaddr *) &serv_addr,
               sizeof(serv_addr)) < 0) 
-       //error( const_cast<char *>( "ERROR on binding" ) );
 	printf("ERROR on binding");
      listen(sockfd,5);
      clilen = sizeof(cli_addr);
@@ -130,7 +130,6 @@ int main( int argc, char *argv[] )
      while ( 1 ) {
         printf( "waiting for new client...\n" );
         if ( ( newsockfd = accept( sockfd, (struct sockaddr *) &cli_addr, (socklen_t*) &clilen) ) < 0 )
-            //error( const_cast<char *>("ERROR on accept") );
 		printf("ERROR on accept");
         printf( "opened new communication with client\n" );
         while ( 1 ) {
@@ -157,34 +156,36 @@ int main( int argc, char *argv[] )
 #endif
 
 
+    return( 0 );
+}
+
+
 /*****************************************************************************/
 /*****************************************************************************/
 /********************** S T A T I C   F U N C T I O N S **********************/
 /*****************************************************************************/
 /*****************************************************************************/
 
-
 /* The server waits for a connection request from a client.
 The server assumes the client will send positive integers, which it sends back multiplied by 2.
 If the server receives -1 it closes the socket with the client.
 If the server receives -2, it exits.
  */
-int func( int a ) {
+static int func( int a ) {
    return 2 * a;
 }
 
-void sendData( int sockfd, int x ) {
+static void sendData( int sockfd, int x ) {
   int n;
 
   char buffer[32];
   sprintf( buffer, "%d\n", x );
   if ( (n = write( sockfd, buffer, strlen(buffer) ) ) < 0 )
-//    error( const_cast<char *>( "ERROR writing to socket") );
 	printf("ERROR writing to socket");
   buffer[n] = '\0';
 }
 
-int getData( int sockfd ) {
+static int getData( int sockfd ) {
   char buffer[32];
   int n;
 
@@ -199,9 +200,5 @@ int getData( int sockfd ) {
 /**********************************************************/
 
 
-
-
-    return( 0 );
-}
 
 
