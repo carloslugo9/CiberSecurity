@@ -60,9 +60,10 @@ int main( int argc, char *argv[] )
     unsigned char TcpMessage[256], payload[32];
     int           TcpMessageSize, payloadSize;
     int           entityId = 3;
-    char          keyboard[100];
+    char          keyboard[10];
     int           sockfd, portno = 8081;
-    char          serverIp[20] = "192.168.43.166";
+    //char          serverIp[20] = "192.168.43.166";
+    char          serverIp[20] = "192.168.15.10";
     
     printf(ANSI_COLOR_BOLD_GREEN);
     printf("**************************************************************\n");
@@ -91,35 +92,46 @@ int main( int argc, char *argv[] )
         memset( keyboard, 0, sizeof( keyboard ) );
         scanf("%s",keyboard);
         
-
         
-        memset( payload,    1, sizeof( payload ) );
         memset( TcpMessage, 0, sizeof( TcpMessage ) );
         
-        signAndCiphMessage(payload, sizeof(payload), TcpMessage, 
+
+        
+        switch(keyboard[0])
+        {
+            /* Normal case, send<1-val> */
+            case '1':                
+                memset( payload, keyboard[2], sizeof( payload ) );
+                signAndCiphMessage(payload, sizeof(payload), TcpMessage, 
 			   			   &TcpMessageSize, entityId);
-        
-        printf("\nSending...");
-        sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage));        
-        
+			   			   
+                printf("\nSending...");
+                sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
+                
+                getDataTcp( sockfd, TcpMessage );
+                VerifAndDecryptMessage(TcpMessage, payload, &payloadSize);
+                
+            break;
+            
+            /* Destroying hash */
+            case '2':
+            
+            /* Destroying signature */
+            break;
+            
+            /* Destroying AES key */
+            case '3':
+            
+            break;
+            
+            /* Destroying AES crip msg */
+            case '4':
+            
+            break;
+        }       
     }
 
 	close( sockfd );
-
-
-    VerifAndDecryptMessage(TcpMessage, payload, &payloadSize);
-
-
-
-
-
-    //sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage));
-    
-    //sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage));
-    
-    //getDataTcp( sockfd, TcpMessage );
-    
-
 
     return( 0 );
 }
