@@ -13,17 +13,14 @@
 /********************** P U B L I C   F U N C T I O N S **********************/
 /*****************************************************************************/
 /*****************************************************************************/
-void getMyKeys( void );
-
-void geyKeyDatabase( void );
 
 void signAndCiphMessage( unsigned char payload[], 
 	                              int  payloadSize,
 			             unsigned char tcpMessage[],
-  			                      int  *tcpMsgSize );
+  			                      int  *tcpMsgSize,
+  			                      int  entity );
 
 int VerifAndDecryptMessage(unsigned char tcpMessage[],
-								     int  tcpMsgSize,
 							unsigned char payload[],
 									 int  *payloadSize);
 

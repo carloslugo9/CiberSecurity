@@ -82,108 +82,19 @@ static mbedtls_ecdsa_context ctx_sign_Db[5];
 static void FromFileToMemory(char *src, char *dst, int len);
 static void dump_privkey( const char *title, mbedtls_ecdsa_context *key );
 static void dump_pubkey( const char *title, mbedtls_ecdsa_context *key );
-
+static int  getMyKeys( int entity );
+static void geyKeyDatabase( void );
 
 /*****************************************************************************/
 /*****************************************************************************/
 /********************** P U B L I C   F U N C T I O N S **********************/
 /*****************************************************************************/
 /*****************************************************************************/
-void getMyKeys( void )
-{
-    FILE *fp;
-    char str[MAXCHAR];
-    int selector = 0;
-    const unsigned char *bufGrpPointer;
-
-    fp = fopen("keyGenerator//key_3.txt", "r");
-   
-    while (fgets(str, MAXCHAR, fp) != NULL)
-    {
-        switch(selector)
-        {
-            case 0:
-            FromFileToMemory(str, str, 10 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_group(&ctx_Mysign.grp,&bufGrpPointer,MAXCHAR);
-            selector = 1;
-            break;
-            
-            case 1:
-            FromFileToMemory(str, str, 200 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_point( &ctx_Mysign.grp,(mbedtls_ecp_point *)&ctx_Mysign.d,
-                                        &bufGrpPointer, MAXCHAR);
-            selector = 2;
-            break;
-            
-            case 2:
-            FromFileToMemory(str, str, 200 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_point( &ctx_Mysign.grp, &ctx_Mysign.Q,&bufGrpPointer, MAXCHAR);
-            selector = 3;
-            break;
-        }
-    }
-    
-    fclose(fp);
-
-    dump_privkey( "My Priv key:   ", &ctx_Mysign );
-    dump_pubkey(  "My Public key: ", &ctx_Mysign );       
-}
-
-
-void geyKeyDatabase( void )
-{
-    /* READ DB */
-    FILE *fpDb;
-    char str[MAXCHAR];
-    int dbCtr    = 0;
-    int selector = 0;
-    const unsigned char *bufGrpPointer;
-
-    fpDb = fopen("keyGenerator//key_database.txt", "r");   
-
-    while (fgets(str, MAXCHAR, fpDb) != NULL)
-    {
-        switch(selector)
-        {
-            case 0:
-            FromFileToMemory(str, str, 10 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_group(&ctx_sign_Db[dbCtr].grp,&bufGrpPointer,MAXCHAR);
-            selector = 1;
-            break;
-            
-            case 1:
-            FromFileToMemory(str, str, 100 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_point( &ctx_sign_Db[dbCtr].grp,(mbedtls_ecp_point *)&ctx_sign_Db[dbCtr].d,
-                                        &bufGrpPointer, MAXCHAR);
-            selector = 2;
-            break;
-            
-            case 2:
-            FromFileToMemory(str, str, 100 );
-            bufGrpPointer = (const unsigned char *)&str[0];
-            mbedtls_ecp_tls_read_point( &ctx_sign_Db[dbCtr].grp, &ctx_sign_Db[dbCtr].Q,&bufGrpPointer, MAXCHAR);
-            selector = 0;
-            
-            printf("Public key[%d]: ",dbCtr);
-            dump_pubkey( "", &ctx_sign_Db[dbCtr] );   
-
-            dbCtr++;
-            break;
-        }
-    }
-
-    fclose(fpDb);
-}
-
 void signAndCiphMessage( unsigned char payload[], 
 	                              int  payloadSize,
 			             unsigned char tcpMessage[],
-  			                      int  *tcpMsgSize )
+  			                      int  *tcpMsgSize,
+  			                      int  entity )
 {
     unsigned char hash[32];
     unsigned char sig[MBEDTLS_ECDSA_MAX_LEN];	/* L = 139 */
@@ -198,8 +109,10 @@ void signAndCiphMessage( unsigned char payload[],
     unsigned char IV_cpy[16];
     unsigned char bufferOutAes[32];
     
+    dump_buf( "\n  . Payload:  ", payload, payloadSize );
+    
     /* Compute message hash */
-    mbedtls_printf( "\n  . Hashing message..." );
+    mbedtls_printf( "  . Hashing message..." );
 
     mbedtls_sha256_ret( payload,		    /* Buffer holding data */
 	                    payloadSize, 	    /* length */
@@ -208,9 +121,9 @@ void signAndCiphMessage( unsigned char payload[],
 
     mbedtls_printf( " ok" );
     dump_buf( "\n  . Hash: ", hash, sizeof( hash ) );
-    printf(     "  . Hash length: %ld", sizeof( hash ) );
+    //printf(     "  . Hash length: %ld", sizeof( hash ) );
     
-    mbedtls_printf( "\n  . Signing message..." );
+    mbedtls_printf( "  . Signing message..." );
     
     /* Calculating entropy */
     mbedtls_ctr_drbg_init( &ctr_drbg );	
@@ -225,6 +138,8 @@ void signAndCiphMessage( unsigned char payload[],
     {
         mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret );
     }
+    
+    getMyKeys(entity);
 
     /* Signing message */
     if( ( ret = mbedtls_ecdsa_write_signature(  &ctx_Mysign, 		     /* ECDSA context  */
@@ -240,7 +155,9 @@ void signAndCiphMessage( unsigned char payload[],
         mbedtls_printf( " failed\n  ! mbedtls_ecdsa_genkey returned %d\n", ret );
     }
     
-    dump_buf(  " ok\n  . Signature: ", sig, sig_len );
+    mbedtls_ecdsa_free(&ctx_Mysign);
+    
+    dump_buf(  "  . OK! Signature: ", sig, sig_len );
     mbedtls_printf( "  . Signature length = %u", (unsigned int) sig_len );
     
     /* AES */
@@ -267,20 +184,20 @@ void signAndCiphMessage( unsigned char payload[],
         printf( " failed\n ! mbedtls_ctr_drbg_random returned -0x%04x\n", -ret );
     }
     
-    dump_buf("\n  . Key:  ",key,sizeof(key));
-    printf(     "  . Key length: %ld", sizeof( key ) );
+    dump_buf("\n  . Key:        ",key,sizeof(key));
+    //printf(     "  . Key length: %ld", sizeof( key ) );
     
     /* Set key */
     mbedtls_aes_setkey_enc( &aes_ctx, key, 256 );
     
     /* Apply algorithm */
     mbedtls_aes_crypt_cbc( &aes_ctx, MBEDTLS_AES_ENCRYPT, sizeof(bufferOutAes), IV_cpy, payload, bufferOutAes );
-    dump_buf("\n  . Encrypted message: ",bufferOutAes,sizeof(bufferOutAes));
-    printf(  "  . Encrypted message length: %ld", sizeof( bufferOutAes ) );
+    dump_buf("  . Encryp msg: ",bufferOutAes,sizeof(bufferOutAes));
+    //printf(  "  . Encrypted message length: %ld", sizeof( bufferOutAes ) );
 
     /* Preapre whole message */
     *tcpMsgSize = 4 + sizeof( hash ) + sig_len + sizeof( key ) + sizeof( bufferOutAes );
-    printf("\n  . Prepararing whole message of size:%d ...", *tcpMsgSize);
+    printf("  . Prepararing whole message of size:%d ...", *tcpMsgSize);
 
     tcpMessage[0] = sizeof( hash );
     tcpMessage[1] = sig_len;
@@ -300,8 +217,7 @@ void signAndCiphMessage( unsigned char payload[],
 
 
 int VerifAndDecryptMessage(unsigned char tcpMessage[],
-								     int  tcpMsgSize,
-							unsigned char payload[],
+						   unsigned char payload[],
 									 int  *payloadSize)
 {
     unsigned char hash[32], hash_ver[32];
@@ -330,7 +246,9 @@ int VerifAndDecryptMessage(unsigned char tcpMessage[],
     memcpy(bufferInAes,  &tcpMessage[4 + hashSize + sig_len + keySize], *payloadSize);
     
     dump_buf(  "\n  . The signature: ", sig, sig_len );
-        
+    
+    geyKeyDatabase();
+    
     for(ctx_ctr = 0; ctx_ctr < 5 ; ctx_ctr++)
     {
         if( ( ret = mbedtls_ecdsa_read_signature( &ctx_sign_Db[ctx_ctr],
@@ -344,6 +262,8 @@ int VerifAndDecryptMessage(unsigned char tcpMessage[],
             printf("  . > Found. Match with <%d> entity!!!\n", ctx_ctr);
             match_flag = ctx_ctr;
         }
+        
+        mbedtls_ecdsa_free(&ctx_sign_Db[ctx_ctr]);
     }
     
 
@@ -353,7 +273,7 @@ int VerifAndDecryptMessage(unsigned char tcpMessage[],
         printf("  . Verification OK!!!");
         printf(ANSI_COLOR_RESET);
         
-        printf("\n  . Applying AES dencript algorithm...\n");
+        printf("\n  . Applying AES decript algorithm...\n");
         dump_buf(  "  . The key:        ", key, keySize );
         dump_buf(  "  . And encryp msg: ", bufferInAes, *payloadSize );
 
@@ -438,6 +358,133 @@ void mbedtls_param_failed( const char *failure_condition,
 /********************** S T A T I C   F U N C T I O N S **********************/
 /*****************************************************************************/
 /*****************************************************************************/
+static int getMyKeys( int entity )
+{
+    FILE *fp;
+    char str[MAXCHAR];
+    int selector = 0;
+    const unsigned char *bufGrpPointer;
+    int retVal = 0;
+
+    switch(entity)
+    {
+        case 0:
+            fp = fopen("keyGenerator//key_0.txt", "r");   
+        break;
+        
+        case 1:
+            fp = fopen("keyGenerator//key_1.txt", "r");
+        break;
+        
+        case 2:
+            fp = fopen("keyGenerator//key_2.txt", "r");
+        break;
+        
+        case 3:
+            fp = fopen("keyGenerator//key_3.txt", "r");
+        break;
+        
+        case 4:
+            fp = fopen("keyGenerator//key_4.txt", "r");
+        break;
+        
+        default:
+            printf(ANSI_COLOR_BOLD_RED);
+            printf("  . ERROR! wrong entity ID\n");
+            printf(ANSI_COLOR_RESET);
+            retVal = 1;
+        break;
+    }
+    
+    if(retVal == 0)
+    {
+        while (fgets(str, MAXCHAR, fp) != NULL)
+        {
+            switch(selector)
+            {
+                case 0:
+                FromFileToMemory(str, str, 10 );
+                bufGrpPointer = (const unsigned char *)&str[0];
+                mbedtls_ecp_tls_read_group(&ctx_Mysign.grp,&bufGrpPointer,MAXCHAR);
+                selector = 1;
+                break;
+                
+                case 1:
+                FromFileToMemory(str, str, 200 );
+                bufGrpPointer = (const unsigned char *)&str[0];
+                mbedtls_ecp_tls_read_point( &ctx_Mysign.grp,(mbedtls_ecp_point *)&ctx_Mysign.d,
+                                            &bufGrpPointer, MAXCHAR);
+                selector = 2;
+                break;
+                
+                case 2:
+                FromFileToMemory(str, str, 200 );
+                bufGrpPointer = (const unsigned char *)&str[0];
+                mbedtls_ecp_tls_read_point( &ctx_Mysign.grp, &ctx_Mysign.Q,&bufGrpPointer, MAXCHAR);
+                selector = 3;
+                break;
+            }
+        }
+        
+        fclose(fp);
+
+        dump_privkey( "\n  . My Priv key:   ", &ctx_Mysign );
+        dump_pubkey(  "  . My Public key: ", &ctx_Mysign );
+    }
+    
+    return retVal;       
+}
+
+
+
+static void geyKeyDatabase( void )
+{
+    /* READ DB */
+    FILE *fpDb;
+    char str[MAXCHAR];
+    int dbCtr    = 0;
+    int selector = 0;
+    const unsigned char *bufGrpPointer;
+
+    fpDb = fopen("keyGenerator//key_database.txt", "r");   
+
+    while (fgets(str, MAXCHAR, fpDb) != NULL)
+    {
+        switch(selector)
+        {
+            case 0:
+            FromFileToMemory(str, str, 10 );
+            bufGrpPointer = (const unsigned char *)&str[0];
+            mbedtls_ecp_tls_read_group(&ctx_sign_Db[dbCtr].grp,&bufGrpPointer,MAXCHAR);
+            selector = 1;
+            break;
+            
+            case 1:
+            FromFileToMemory(str, str, 100 );
+            bufGrpPointer = (const unsigned char *)&str[0];
+            mbedtls_ecp_tls_read_point( &ctx_sign_Db[dbCtr].grp,(mbedtls_ecp_point *)&ctx_sign_Db[dbCtr].d,
+                                        &bufGrpPointer, MAXCHAR);
+            selector = 2;
+            break;
+            
+            case 2:
+            FromFileToMemory(str, str, 100 );
+            bufGrpPointer = (const unsigned char *)&str[0];
+            mbedtls_ecp_tls_read_point( &ctx_sign_Db[dbCtr].grp, &ctx_sign_Db[dbCtr].Q,&bufGrpPointer, MAXCHAR);
+            selector = 0;
+            
+            //printf("Public key[%d]: ",dbCtr);
+            //dump_pubkey( "", &ctx_sign_Db[dbCtr] );   
+
+            dbCtr++;
+            break;
+        }
+    }
+
+    fclose(fpDb);
+}
+
+
 static void FromFileToMemory(char *src, char *dst, int len)
 {
     int ctrWord;
