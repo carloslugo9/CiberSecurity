@@ -24,6 +24,8 @@ int VerifAndDecryptMessage(unsigned char tcpMessage[],
 							unsigned char payload[],
 									 int  *payloadSize);
 
+void FromFileToMemory(char *src, char *dst, int len);
+
 void dump_buf( const char *title, unsigned char *buf, size_t len );
 
 #endif /*PROTOCOL_MANGR_H_*/

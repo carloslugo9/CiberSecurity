@@ -94,7 +94,6 @@ int main( int argc, char *argv[] )
     
     while(1)
     {
-    
         printf(ANSI_COLOR_YELLOW);
         printf("\n> Wait client ...");
         fflush( stdout );
@@ -104,7 +103,8 @@ int main( int argc, char *argv[] )
         
         while(1)
         {
-            printf(ANSI_COLOR_YELLOW);        
+            printf(ANSI_COLOR_YELLOW);      
+            printf("\n##################################################################");  
             printf( "\n> Ready to receive requests..." );
             fflush( stdout );
             printf(ANSI_COLOR_RESET);
@@ -133,7 +133,7 @@ int main( int argc, char *argv[] )
                 memset( payload, char2send, sizeof( payload ) );
                 
                 printf(ANSI_COLOR_YELLOW);        
-                printf( "> Creating response message with <%d>", char2send );
+                printf( "> Creating response message with <%02X>", char2send );
                 fflush( stdout );
                 printf(ANSI_COLOR_RESET);
                 
@@ -145,7 +145,15 @@ int main( int argc, char *argv[] )
                 printf(ANSI_COLOR_YELLOW);        
                 printf( "> Sending OK!" );
                 fflush( stdout );
-            }            
+            }
+            else
+            {
+                /* Insecure comm. Actions may be taken */
+                printf(ANSI_COLOR_BOLD_RED);        
+                printf( "\n> Unsafe communication!");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+            }
         }
 
         close( newsockfd );

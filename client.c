@@ -81,52 +81,166 @@ int main( int argc, char *argv[] )
 
     /* TCP */
     printf(ANSI_COLOR_YELLOW);
-    printf("> Initializing communications ... \n");
+    printf("> Initializing communications ... ");
+    fflush( stdout );
     printf(ANSI_COLOR_RESET);
     
     if(comInit(&sockfd , portno, serverIp) == 0)
         return 0;
+        
+    printf(ANSI_COLOR_YELLOW);
+    printf("OK! Connected with server ");
+    fflush( stdout );
+    printf(ANSI_COLOR_RESET);
+    
 
     while(1)
     {
+        printf(ANSI_COLOR_YELLOW);
+        printf("\n##################################################################");
+        printf("\n> Write comand: #-val, donde #:");
+        printf("\n> 1. Send message with \"val\" values ");
+        printf("\n> 2. Send message with \"val\" values and altering sign ");
+        printf("\n> 3. Send message with \"val\" values and altering AES key ");
+        printf("\n> 4. Send message with \"val\" values and altering AES message ");
+        printf("\n> 5. Send message with \"val\" values and altering hash: ");
+        fflush( stdout );
+        printf(ANSI_COLOR_RESET);
+    
+        /* Wait for keyboard command */
         memset( keyboard, 0, sizeof( keyboard ) );
         scanf("%s",keyboard);
         
+        FromFileToMemory(&keyboard[2], &keyboard[2], 2);
         
         memset( TcpMessage, 0, sizeof( TcpMessage ) );
         
-
+        memset( payload, keyboard[2], sizeof( payload ) );
+        
+        signAndCiphMessage(payload, sizeof(payload), TcpMessage, 
+	   			           &TcpMessageSize, entityId);
         
         switch(keyboard[0])
         {
             /* Normal case, send<1-val> */
             case '1':                
-                memset( payload, keyboard[2], sizeof( payload ) );
-                signAndCiphMessage(payload, sizeof(payload), TcpMessage, 
-			   			   &TcpMessageSize, entityId);
-			   			   
-                printf("\nSending...");
+                printf(ANSI_COLOR_YELLOW);
+                printf("> Sending response...");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
                 sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
                 
+                printf(ANSI_COLOR_YELLOW);
+                printf("\n> Waiting for response...");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
                 getDataTcp( sockfd, TcpMessage );
                 VerifAndDecryptMessage(TcpMessage, payload, &payloadSize);
-                
             break;
             
-            /* Destroying hash */
-            case '2':
-            
             /* Destroying signature */
+            case '2':
+                TcpMessage[37]++;
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf(  "> Altering signature (byte 41)...");
+                printf("\n> New final message:  ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                dump_buf(  "", TcpMessage, TcpMessageSize );
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("> Sending response... ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("OK!");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
             break;
             
             /* Destroying AES key */
             case '3':
+                TcpMessage[100]++;
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf(  "> Altering AES key (byte 104)...");
+                printf("\n> New final message:  ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                dump_buf(  "", TcpMessage, TcpMessageSize );
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("> Sending response... ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("OK!");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+            break;
+            
+            /* Destroying AES encrypted msg */
+            case '4':
+                TcpMessage[130]++;
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf(  "> Altering AES encrypted msg (byte 134)...");
+                printf("\n> New final message:  ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                dump_buf(  "", TcpMessage, TcpMessageSize );
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("> Sending response... ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("OK!");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
             
             break;
             
-            /* Destroying AES crip msg */
-            case '4':
+            /* Destroying hash */
+            case '5':
+                TcpMessage[10]++;
+
+                printf(ANSI_COLOR_YELLOW);
+                printf(  "> Altering hash (byte 14)...");
+                printf("\n> New final message:  ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                dump_buf(  "", TcpMessage, TcpMessageSize );
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("> Sending response... ");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
+                
+                sendDataTcp(sockfd, TcpMessage, sizeof(TcpMessage)); 
+                
+                printf(ANSI_COLOR_YELLOW);
+                printf("OK!");
+                fflush( stdout );
+                printf(ANSI_COLOR_RESET);
             
+            break;
+            
+            default:
             break;
         }       
     }
@@ -149,10 +263,10 @@ static int comInit( int *sockfd, int portno, char serverIp[] )
     struct hostent *server;
     
     if ( ( *sockfd = socket(AF_INET, SOCK_STREAM, 0) ) < 0 )
-        printf("ERROR opening socket");
+        printf("\nERROR opening socket\n");
 
     if ( ( server = gethostbyname( serverIp ) ) == NULL ) 
-        printf("ERROR, no such host\n");
+        printf("\nERROR, no such host\n");
 
     bzero( (char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -162,11 +276,13 @@ static int comInit( int *sockfd, int portno, char serverIp[] )
     
     if ( connect(*sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
     {
-        printf("ERROR connecting");
+        printf(ANSI_COLOR_BOLD_RED);
+        printf("\n> ERROR connecting\n");
+        fflush( stdout );
+        printf(ANSI_COLOR_RESET);
     }
     else
     {
-        printf( "  . Opened new communication with client" );
         retVal = 1;
     }
         
@@ -178,7 +294,7 @@ static int sendDataTcp( int sockfd, unsigned char buff[], int size )
 {
   int n;
   if ( (n = write( sockfd, buff, size ) ) < 0 )
-	printf("ERROR writing to socket");
+	printf("\nERROR writing to socket\n");
 	
     return n;
 }
@@ -189,7 +305,7 @@ static int getDataTcp( int sockfd, unsigned char buff[] ) {
   int n;
 
   if ( (n = read(sockfd,buff,256) ) < 0 )
-        printf("ERROR reading from socket");
+        printf("\nERROR reading from socket\n");
         
 
   return n;
@@ -235,7 +351,8 @@ static void getConexParameters( int *entityId, int *portId, char serverIp[])
             serverIp[ctr-7] = keyboard[ctr]; 
         }
         
-    }//3-8081-192.168.43.166>
+        fflush( stdout );   
+    }
 }
 
 

@@ -79,7 +79,6 @@ static mbedtls_ecdsa_context ctx_sign_Db[5];
 /********************* S T A T I C   P R O T O T Y P E S *********************/
 /*****************************************************************************/
 /*****************************************************************************/
-static void FromFileToMemory(char *src, char *dst, int len);
 static void dump_privkey( const char *title, mbedtls_ecdsa_context *key );
 static void dump_pubkey( const char *title, mbedtls_ecdsa_context *key );
 static int  getMyKeys( int entity );
@@ -326,6 +325,60 @@ int VerifAndDecryptMessage(unsigned char tcpMessage[],
 }
 
 
+void FromFileToMemory(char *src, char *dst, int len)
+{
+    int ctrWord;
+    int ctrByte = 0;
+    
+    for(ctrWord = 0 ; ctrWord < len ; ctrWord += 2)
+    {
+        char temp = 0;
+        
+        switch(src[ctrWord + 1])
+        {
+            case '0': temp = 0x00; break;
+            case '1': temp = 0x01; break;
+            case '2': temp = 0x02; break;
+            case '3': temp = 0x03; break;
+            case '4': temp = 0x04; break;
+            case '5': temp = 0x05; break;
+            case '6': temp = 0x06; break;
+            case '7': temp = 0x07; break;
+            case '8': temp = 0x08; break;
+            case '9': temp = 0x09; break;
+            case 'A': temp = 0x0A; break;
+            case 'B': temp = 0x0B; break;
+            case 'C': temp = 0x0C; break;
+            case 'D': temp = 0x0D; break;
+            case 'E': temp = 0x0E; break;
+            case 'F': temp = 0x0F; break;
+        }
+        
+        switch(src[ctrWord])
+        {
+            case '0': temp |= 0x00; break;
+            case '1': temp |= 0x10; break;
+            case '2': temp |= 0x20; break;
+            case '3': temp |= 0x30; break;
+            case '4': temp |= 0x40; break;
+            case '5': temp |= 0x50; break;
+            case '6': temp |= 0x60; break;
+            case '7': temp |= 0x70; break;
+            case '8': temp |= 0x80; break;
+            case '9': temp |= 0x90; break;
+            case 'A': temp |= 0xA0; break;
+            case 'B': temp |= 0xB0; break;
+            case 'C': temp |= 0xC0; break;
+            case 'D': temp |= 0xD0; break;
+            case 'E': temp |= 0xE0; break;
+            case 'F': temp |= 0xF0; break;
+        }
+        
+        dst[ctrByte++] = temp;    
+    }
+}
+
+
 void dump_buf( const char *title, unsigned char *buf, size_t len )
 {
     size_t i;
@@ -484,59 +537,6 @@ static void geyKeyDatabase( void )
     fclose(fpDb);
 }
 
-
-static void FromFileToMemory(char *src, char *dst, int len)
-{
-    int ctrWord;
-    int ctrByte = 0;
-    
-    for(ctrWord = 0 ; ctrWord < len ; ctrWord += 2)
-    {
-        char temp = 0;
-        
-        switch(src[ctrWord + 1])
-        {
-            case '0': temp = 0x00; break;
-            case '1': temp = 0x01; break;
-            case '2': temp = 0x02; break;
-            case '3': temp = 0x03; break;
-            case '4': temp = 0x04; break;
-            case '5': temp = 0x05; break;
-            case '6': temp = 0x06; break;
-            case '7': temp = 0x07; break;
-            case '8': temp = 0x08; break;
-            case '9': temp = 0x09; break;
-            case 'A': temp = 0x0A; break;
-            case 'B': temp = 0x0B; break;
-            case 'C': temp = 0x0C; break;
-            case 'D': temp = 0x0D; break;
-            case 'E': temp = 0x0E; break;
-            case 'F': temp = 0x0F; break;
-        }
-        
-        switch(src[ctrWord])
-        {
-            case '0': temp |= 0x00; break;
-            case '1': temp |= 0x10; break;
-            case '2': temp |= 0x20; break;
-            case '3': temp |= 0x30; break;
-            case '4': temp |= 0x40; break;
-            case '5': temp |= 0x50; break;
-            case '6': temp |= 0x60; break;
-            case '7': temp |= 0x70; break;
-            case '8': temp |= 0x80; break;
-            case '9': temp |= 0x90; break;
-            case 'A': temp |= 0xA0; break;
-            case 'B': temp |= 0xB0; break;
-            case 'C': temp |= 0xC0; break;
-            case 'D': temp |= 0xD0; break;
-            case 'E': temp |= 0xE0; break;
-            case 'F': temp |= 0xF0; break;
-        }
-        
-        dst[ctrByte++] = temp;    
-    }
-}
 
 #if !defined(MBEDTLS_ECDSA_C) || !defined(MBEDTLS_SHA256_C) || \
     !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_CTR_DRBG_C)
