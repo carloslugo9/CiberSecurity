@@ -60,8 +60,9 @@ int main( int argc, char *argv[] )
 {
     unsigned char TcpMessage[200], payload[32];
     int           TcpMessageSize,  payloadSize;
-    int           entityId = 0, char2send = 0;
+    int           entityId = 0;
     int           newsockfd, portno = 8081;
+    char          char2send[1];
     
     /* Welcome screen */
     printf(ANSI_COLOR_BOLD_GREEN);
@@ -91,6 +92,8 @@ int main( int argc, char *argv[] )
     printf("OK!");
     fflush( stdout );
     printf(ANSI_COLOR_RESET);
+    
+    char2send[0] = 0;
     
     while(1)
     {
@@ -129,11 +132,12 @@ int main( int argc, char *argv[] )
             memset( payload, 0x00, sizeof( payload ) );
             if(1 == VerifAndDecryptMessage(TcpMessage, payload, &payloadSize))
             {
-                char2send++;
-                memset( payload, char2send, sizeof( payload ) );
+                char2send[0] = payload[0] + 1;
+
+                memset( payload, char2send[0], sizeof( payload ) );
                 
                 printf(ANSI_COLOR_YELLOW);        
-                printf( "> Creating response message with <%02X>", char2send );
+                printf( "> Creating response message with <%02X>", char2send[0] );
                 fflush( stdout );
                 printf(ANSI_COLOR_RESET);
                 
